@@ -15,6 +15,8 @@ from sklearn.metrics import classification_report, confusion_matrix, accuracy_sc
 
 from sklearn.metrics import ConfusionMatrixDisplay
 
+import joblib
+
 df=pd.read_csv('diabetes.csv')
 print(df.head())
 print(df.isnull().sum())
@@ -43,17 +45,20 @@ plt.show()
 X=df.drop('Outcome', axis=1)
 y=df['Outcome']
 
+#split the dataset
+X_train, X_test, y_train, y_test=train_test_split(X, y, test_size=0.2, random_state=42)
+
 #normalize the data
 scaler=StandardScaler()
-X_scaled=scaler.fit_transform(X)
+X_train_scaled=scaler.fit_transform(X_train)
+X_test_scaled=scaler.transform(X_test)
 
-#split the dataset
-X_train, X_test, y_train, y_test=train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
 
 
 #train the machine learning model. Used smote to generate synthentic data to balance the training dataset
 smote= SMOTE(random_state=42)
-X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
+X_resampled, y_resampled = smote.fit_resample(X_train_scaled, y_train)
 
 param_grid= {
     'n_estimators': [100, 150],
@@ -67,7 +72,7 @@ grid_search.fit(X_resampled, y_resampled)
 #model
 best_model = grid_search.best_estimator_
 #predict
-y_pred_rf=best_model.predict(X_test)
+y_pred_rf=best_model.predict(X_test_scaled)
 
 #evaluate
 print("Accuracy: ", accuracy_score(y_test, y_pred_rf))
@@ -76,7 +81,7 @@ print(classification_report(y_test, y_pred_rf))
 
 
 #visualize the results
-ConfusionMatrixDisplay.from_estimator(best_model, X_test, y_test, cmap="Blues")
+ConfusionMatrixDisplay.from_estimator(best_model, X_test_scaled, y_test, cmap="Blues")
 plt.title("Confusion Matrix")
 plt.show()
 
@@ -95,3 +100,7 @@ plt.xlabel('Importance Score')
 plt.ylabel('Feature')
 plt.tight_layout()
 plt.show()
+
+
+joblib.dump(best_model, 'diabetes_model2.pkl')
+joblib.dump(scaler, 'scaler.pkl')
